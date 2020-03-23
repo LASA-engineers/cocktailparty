@@ -2,16 +2,20 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Discord;
 
 public class DiscordController : MonoBehaviour {
 
-    private long ClientId;
-
     private Discord.Discord discord;
 
     void Start () {
-        discord = new Discord.Discord(ClientId, (System.UInt64)Discord.CreateFlags.Default);
+        var clientId = ClientIdSender.clientId;
+        if (clientId == 0) {
+            SceneManager.LoadScene("InputClientId");
+        }
+
+        discord = new Discord.Discord(clientId, (System.UInt64)Discord.CreateFlags.Default);
 
         var userManager = discord.GetUserManager();
         userManager.OnCurrentUserUpdate += () => {
