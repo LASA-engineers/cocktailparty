@@ -24,10 +24,18 @@ public class DiscordController : MonoBehaviour {
         };
 
         var lobbyManager = discord.GetLobbyManager();
+        var voiceManager = discord.GetVoiceManager();
         GetOrCreateLobby(lobbyManager, (lobby) => {
+            for (int i = 0; i < lobbyManager.MemberCount(lobby.Id); i++) {
+                var id = lobbyManager.GetMemberUserId(lobby.Id, i);
+                var user = lobbyManager.GetMemberUser(lobby.Id, id);
+                Debug.LogFormat("Got user {0}", user.Username);
+            }
             lobbyManager.ConnectVoice(lobby.Id, (result) => {
                 if (result == Discord.Result.Ok) {
                     Debug.LogFormat("voice connected: {0}", lobby.Id);
+                    Debug.LogFormat("local volume for owner {0} is {1}", lobby.OwnerId, voiceManager.GetLocalVolume(lobby.OwnerId));
+                    Debug.LogFormat("Mute: {0}, Deaf: {1}", voiceManager.IsSelfMute(), voiceManager.IsSelfDeaf());
                 }
             });
         });
@@ -40,15 +48,27 @@ public class DiscordController : MonoBehaviour {
             if (result == Discord.Result.Ok) {
                 if (lobbyManager.LobbyCount() == 1) {
                     var lobbyId = lobbyManager.GetLobbyId(0);
-                    var lobby = lobbyManager.GetLobby(lobbyId);
-                    callback(lobby);
-                } else {
-                    var txn = lobbyManager.GetLobbyCreateTransaction();
-                    txn.SetCapacity(100);
-                    txn.SetType(Discord.LobbyType.Public);
-                    lobbyManager.CreateLobby(txn, (Discord.Result result1, ref Discord.Lobby lobby) => {
+                    Debug.LogFormat("existing lobby found: {0}", lobbyId);
+                    lobbyManager.ConnectLobby(lobbyId, lobbyManager.GetLobbyMetadataValue(lobbyId, "Secret"), (Discord.Result result1, ref Discord.Lobby lobby) => {
                         if (result1 == Discord.Result.Ok) {
-                            Debug.LogFormat("new lobby created with password `{0}`", lobby.Secret);
+                            Debug.Log("existing lobby connected");
+                            callback(lobby);
+                        }
+                    });
+                } else {
+                    var txnCreate = lobbyManager.GetLobbyCreateTransaction();
+                    txnCreate.SetCapacity(100);
+                    txnCreate.SetType(Discord.LobbyType.Public);
+                    lobbyManager.CreateLobby(txnCreate, (Discord.Result result1, ref Discord.Lobby lobby) => {
+                        if (result1 == Discord.Result.Ok) {
+                            Debug.LogFormat("new lobby created: {0}", lobby.Id);
+                            var txnUpdate = lobbyManager.GetLobbyUpdateTransaction(lobby.Id);
+                            txnUpdate.SetMetadata("Secret", lobby.Secret);
+                            lobbyManager.UpdateLobby(lobby.Id, txnUpdate, (Discord.Result result2) => {
+                                if (result2 == Discord.Result.Ok) {
+                                    Debug.Log("lobby secret registered");
+                                }
+                            });
                             callback(lobby);
                         }
                     });
