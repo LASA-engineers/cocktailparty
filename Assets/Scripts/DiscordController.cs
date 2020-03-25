@@ -3,9 +3,12 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 using Discord;
 
 public class DiscordController : MonoBehaviour {
+
+    public GameObject canvasPrefab;
 
     private Discord.Discord discord;
 
@@ -84,6 +87,30 @@ public class DiscordController : MonoBehaviour {
     void ShowUser(Discord.LobbyManager lobbyManager, long lobbyId, long userId) {
         var user = lobbyManager.GetMemberUser(lobbyId, userId);
         Debug.LogFormat("Got user {0}", user.Username);
+        GameObject canvas = Instantiate(canvasPrefab, new Vector3(0, 0, 0), Quaternion.identity);
+        canvas.transform.SetParent(GameObject.Find("Canvas").transform, false);
+
+        var image = canvas.GetComponentInChildren<Image>();
+        var imageManager = discord.GetImageManager();
+        imageManager.Fetch(Discord.ImageHandle.User(userId, 128), (result, handle) => {
+            if (result == Discord.Result.Ok) {
+                var size = imageManager.GetDimensions(handle);
+                var rgba = imageManager.GetData(handle);
+                // flip upside down
+                var flipped = new byte[rgba.Length];
+                for (int y = 0; y < size.Height; y++) {
+                    Array.Copy(rgba, size.Width * y * 4, flipped, size.Width * (size.Height - y - 1) * 4, size.Width * 4);
+                }
+                var texture = new Texture2D((int)size.Width, (int)size.Height, TextureFormat.RGBA32, false, true);
+                texture.LoadRawTextureData(flipped);
+                texture.Apply();
+                var rect = new Rect(0, 0, size.Width, size.Width);
+                image.overrideSprite = Sprite.Create(texture, rect, Vector2.zero);
+            }
+        });
+
+        var text = canvas.GetComponentInChildren<Text>();
+        text.text = user.Username;
     }
 
     void Update () {
