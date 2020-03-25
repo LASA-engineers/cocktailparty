@@ -21,24 +21,28 @@ public class DiscordController : MonoBehaviour {
         userManager.OnCurrentUserUpdate += () => {
             var currentUser = userManager.GetCurrentUser();
             Debug.LogFormat("current user id: {0}", currentUser.Id);
-        };
 
-        var lobbyManager = discord.GetLobbyManager();
-        var voiceManager = discord.GetVoiceManager();
-        GetOrCreateLobby(lobbyManager, (lobby) => {
-            for (int i = 0; i < lobbyManager.MemberCount(lobby.Id); i++) {
-                var id = lobbyManager.GetMemberUserId(lobby.Id, i);
-                var user = lobbyManager.GetMemberUser(lobby.Id, id);
-                Debug.LogFormat("Got user {0}", user.Username);
-            }
-            lobbyManager.ConnectVoice(lobby.Id, (result) => {
-                if (result == Discord.Result.Ok) {
-                    Debug.LogFormat("voice connected: {0}", lobby.Id);
-                    Debug.LogFormat("local volume for owner {0} is {1}", lobby.OwnerId, voiceManager.GetLocalVolume(lobby.OwnerId));
-                    Debug.LogFormat("Mute: {0}, Deaf: {1}", voiceManager.IsSelfMute(), voiceManager.IsSelfDeaf());
+            var lobbyManager = discord.GetLobbyManager();
+            var voiceManager = discord.GetVoiceManager();
+            GetOrCreateLobby(lobbyManager, (lobby) => {
+                lobbyManager.ConnectVoice(lobby.Id, (result) => {
+                    if (result == Discord.Result.Ok) {
+                        Debug.LogFormat("voice connected: {0}", lobby.Id);
+                        Debug.LogFormat("local volume for owner {0} is {1}", lobby.OwnerId, voiceManager.GetLocalVolume(lobby.OwnerId));
+                        Debug.LogFormat("Mute: {0}, Deaf: {1}", voiceManager.IsSelfMute(), voiceManager.IsSelfDeaf());
+                    }
+                });
+                for (int i = 0; i < lobbyManager.MemberCount(lobby.Id); i++) {
+                    var userId = lobbyManager.GetMemberUserId(lobby.Id, i);
+                    if (userId != currentUser.Id) {
+                        ShowUser(lobbyManager, lobby.Id, userId);
+                    }
                 }
+                lobbyManager.OnMemberConnect += (lobbyId, userId) => {
+                    ShowUser(lobbyManager, lobbyId, userId);
+                };
             });
-        });
+        };
     }
 
     void GetOrCreateLobby (Discord.LobbyManager lobbyManager, Action<Discord.Lobby> callback) {
@@ -75,6 +79,11 @@ public class DiscordController : MonoBehaviour {
                 }
             }
         });
+    }
+
+    void ShowUser(Discord.LobbyManager lobbyManager, long lobbyId, long userId) {
+        var user = lobbyManager.GetMemberUser(lobbyId, userId);
+        Debug.LogFormat("Got user {0}", user.Username);
     }
 
     void Update () {
