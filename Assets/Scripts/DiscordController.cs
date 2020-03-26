@@ -12,6 +12,7 @@ public class DiscordController : MonoBehaviour {
 
     private Discord.Discord discord;
     private Dictionary<long, GameObject> userIdToCanvas;
+    private List<long> userIdOrder;
 
     void Start () {
         var clientId = ClientIdSender.clientId;
@@ -20,6 +21,7 @@ public class DiscordController : MonoBehaviour {
         }
 
         userIdToCanvas = new Dictionary<long, GameObject>();
+        userIdOrder = new List<long>();
 
         discord = new Discord.Discord(clientId, (System.UInt64)Discord.CreateFlags.Default);
 
@@ -95,7 +97,9 @@ public class DiscordController : MonoBehaviour {
         Debug.LogFormat("Got user {0}", user.Username);
         GameObject canvas = Instantiate(canvasPrefab, new Vector3(0, 0, 0), Quaternion.identity);
         canvas.transform.SetParent(GameObject.Find("Canvas").transform, false);
+        SetCanvasPosition(canvas, userIdToCanvas.Count);
         userIdToCanvas.Add(userId, canvas);
+        userIdOrder.Add(userId);
 
         var image = canvas.GetComponentInChildren<Image>();
         var imageManager = discord.GetImageManager();
@@ -122,6 +126,17 @@ public class DiscordController : MonoBehaviour {
 
     void DeleteUser(Discord.LobbyManager lobbyManager, long lobbyId, long userId) {
         Destroy(userIdToCanvas[userId]);
+        userIdToCanvas.Remove(userId);
+        userIdOrder.Remove(userId);
+        for (int i = 0; i < userIdOrder.Count; i++) {
+            SetCanvasPosition(userIdToCanvas[userIdOrder[i]], i);
+        }
+    }
+
+    void SetCanvasPosition(GameObject canvas, int order) {
+        foreach (Transform child in canvas.transform) {
+            child.Translate(0, 240 - order * 120, 0);
+        }
     }
 
     void Update () {
