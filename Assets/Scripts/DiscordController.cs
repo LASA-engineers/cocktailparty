@@ -122,6 +122,9 @@ public class DiscordController : MonoBehaviour {
 
         var text = canvas.GetComponentInChildren<Text>();
         text.text = user.Username;
+
+        var slider = canvas.GetComponentInChildren<Slider>();
+        slider.gameObject.GetComponent<Main_VolumeSlider>().userId = userId;
     }
 
     void DeleteUser(Discord.LobbyManager lobbyManager, long lobbyId, long userId) {
@@ -137,6 +140,11 @@ public class DiscordController : MonoBehaviour {
         foreach (Transform child in canvas.transform) {
             child.Translate(0, 240 - order * 120, 0);
         }
+    }
+
+    public void ChangeVolume(long userId, float volume) {
+        var voiceManager = discord.GetVoiceManager();
+        voiceManager.SetLocalVolume(userId, (byte)volume);
     }
 
     void Update () {
