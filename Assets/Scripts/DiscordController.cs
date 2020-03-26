@@ -11,12 +11,15 @@ public class DiscordController : MonoBehaviour {
     public GameObject canvasPrefab;
 
     private Discord.Discord discord;
+    private Dictionary<long, GameObject> userIdToCanvas;
 
     void Start () {
         var clientId = ClientIdSender.clientId;
         if (clientId == 0) {
             SceneManager.LoadScene("InputClientId");
         }
+
+        userIdToCanvas = new Dictionary<long, GameObject>();
 
         discord = new Discord.Discord(clientId, (System.UInt64)Discord.CreateFlags.Default);
 
@@ -43,6 +46,9 @@ public class DiscordController : MonoBehaviour {
                 }
                 lobbyManager.OnMemberConnect += (lobbyId, userId) => {
                     ShowUser(lobbyManager, lobbyId, userId);
+                };
+                lobbyManager.OnMemberDisconnect += (lobbyId, userId) => {
+                    DeleteUser(lobbyManager, lobby.Id, userId);
                 };
             });
         };
@@ -89,6 +95,7 @@ public class DiscordController : MonoBehaviour {
         Debug.LogFormat("Got user {0}", user.Username);
         GameObject canvas = Instantiate(canvasPrefab, new Vector3(0, 0, 0), Quaternion.identity);
         canvas.transform.SetParent(GameObject.Find("Canvas").transform, false);
+        userIdToCanvas.Add(userId, canvas);
 
         var image = canvas.GetComponentInChildren<Image>();
         var imageManager = discord.GetImageManager();
@@ -111,6 +118,10 @@ public class DiscordController : MonoBehaviour {
 
         var text = canvas.GetComponentInChildren<Text>();
         text.text = user.Username;
+    }
+
+    void DeleteUser(Discord.LobbyManager lobbyManager, long lobbyId, long userId) {
+        Destroy(userIdToCanvas[userId]);
     }
 
     void Update () {
