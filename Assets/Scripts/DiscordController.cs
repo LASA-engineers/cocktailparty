@@ -71,6 +71,7 @@ public class DiscordController : MonoBehaviour {
                         }
                     });
                 } else {
+#if UNITY_STANDALONE_LINUX
                     var txnCreate = lobbyManager.GetLobbyCreateTransaction();
                     txnCreate.SetCapacity(100);
                     txnCreate.SetType(Discord.LobbyType.Public);
@@ -87,6 +88,7 @@ public class DiscordController : MonoBehaviour {
                             callback(lobby);
                         }
                     });
+#endif
                 }
             }
         });
